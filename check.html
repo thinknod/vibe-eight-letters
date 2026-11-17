@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>여덟 글자 계산 점검</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <style>
+    body { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; margin: 24px; color: #1F1D1A; background: #F6F1E7; }
+    h1 { font-size: 22px; } p { color: #685F54; font-size: 14px; }
+    table { border-collapse: collapse; width: 100%; max-width: 820px; background: #fff; font-size: 14px; }
+    th, td { border: 1px solid #D9CFBE; padding: 6px 10px; text-align: left; }
+    .ok { color: #1D6B4F; font-weight: 700; } .bad { color: #A3261B; font-weight: 700; }
+    #sum { font-size: 18px; font-weight: 800; margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <h1>여덟 글자 계산 점검 (개발용)</h1>
+  <p>saju.js를 알려진 값(check-cases.js)과 대조해요. saju.js를 고쳤다면 이 페이지를 열어 모두 맞는지 확인하세요. 배포해도 되지만 링크는 걸지 않아요.</p>
+  <p id="sum"></p>
+  <table><thead><tr><th>항목</th><th>입력</th><th>계산</th><th>기대</th><th>결과</th></tr></thead><tbody id="rows"></tbody></table>
+  <script src="saju.js"></script>
+  <script src="check-cases.js"></script>
+  <script>
+    var C = CHECK_CASES, S = Saju, rows = [], ok = 0, bad = 0;
+    function fmt(d) { return d ? d.y + '-' + String(d.m).padStart(2, '0') + '-' + String(d.d).padStart(2, '0') : '없음'; }
+    function add(kind, input, got, exp, pass) { pass ? ok++ : bad++; rows.push('<tr><td>' + kind + '</td><td>' + input + '</td><td>' + got + '</td><td>' + exp + '</td><td class="' + (pass ? 'ok">맞음' : 'bad">틀림') + '</td></tr>'); }
+    function ymd(s) { return s.split(/[- :]/).map(Number); }
+    C.seollal.forEach(function (s) { var y = ymd(s)[0], r = fmt(S.lunarToSolar(y, 1, 1, false)); add('설날', '음력 ' + y + '-01-01', r, s, r === s); });
+    C.chuseok.forEach(function (s) { var y = ymd(s)[0], r = fmt(S.lunarToSolar(y, 8, 15, false)); add('추석', '음력 ' + y + '-08-15', r, s, r === s); });
+    Object.keys(C.leap).forEach(function (y) { var r = S.leapMonthOf(+y); add('윤달', y + '년', '윤' + r + '월', '윤' + C.leap[y] + '월', r === C.leap[y]); });
+    Object.keys(C.dayPillar).forEach(function (s) { var a = ymd(s), r = S.label(S.dayPillarOfDate(a[0], a[1], a[2])); add('일진', s, r, C.dayPillar[s], r === C.dayPillar[s]); });
+    C.terms.forEach(function (t) { var a = ymd(t[1]), exp = S.toJD(a[0], a[1], a[2] + (a[3] + a[4] / 60 - 9) / 24), err = (S.solarTermJD(t[0], exp) - exp) * 1440; add('절기 ' + t[0] + '°', t[1], (err >= 0 ? '+' : '') + err.toFixed(1) + '분', '±5분', Math.abs(err) <= 5); });
+    C.pillars.forEach(function (c) { var a = ymd(c.input), r = S.compute({ y: a[0], m: a[1], d: a[2], hour: a[3], minute: a[4] }), got = [r.year, r.month, r.day, r.hour].map(S.label).join(' '); add('네 기둥', c.input, got, c.expect.join(' '), got === c.expect.join(' ')); });
+    (C.tenGods || []).forEach(function (c) { var a = ymd(c.input), got = S.tenGodsOf(S.compute({ y: a[0], m: a[1], d: a[2], hour: a[3], minute: a[4] })).join(' '); add('십성', c.input, got, c.expect.join(' '), got === c.expect.join(' ')); });
+    document.getElementById('rows').innerHTML = rows.join('');
+    document.getElementById('sum').innerHTML = '맞음 ' + ok + ', 틀림 <span class="' + (bad ? 'bad' : 'ok') + '">' + bad + '</span>';
+  </script>
+</body>
+</html>
